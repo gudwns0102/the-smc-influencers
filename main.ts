@@ -1,13 +1,14 @@
 import "dotenv/config";
-import { fillYoutubeContents } from "./src/tasks/fill-youtube-contents";
-import { fillYoutubeProfile } from "./src/tasks/fill-youtube-profile";
+import { fillInstagramProfile } from "./src/tasks/fill-instagram-profile";
 
 const task = process.env["TASK_TO_RUN"] || "all";
 
 console.log(`🚀 Running task: ${task}`);
 
-await fillYoutubeProfile();
-await fillYoutubeContents();
+await fillInstagramProfile();
+
+// await fillYoutubeProfile();
+// await fillYoutubeContents();
 
 // try {
 //   if (task === "profile" || task === "all") {
