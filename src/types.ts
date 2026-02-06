@@ -1,0 +1,22 @@
+export type ReelData = {
+  id: string;
+  type: "Video";
+  shortCode: string;
+  caption: string;
+  hashtags: string[];
+  mentions: string[];
+  url: string;
+  commentsCount: number;
+  dimensionsHeight: number;
+  dimensionsWidth: number;
+  likesCount: number;
+  timestamp: string;
+  ownerFullName: string;
+  ownerUsername: string;
+  ownerId: string;
+  isPinned: boolean;
+  productType: string;
+  videoDuration: number | null;
+  videoViewCount: number | null;
+  videoPlayCount: number | null;
+};
