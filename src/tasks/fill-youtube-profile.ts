@@ -13,7 +13,8 @@ export async function fillYoutubeProfile(options?: { is_planning?: boolean }) {
       .select("*")
       .eq("platform", "youtube")
       .is("follower_count", null)
-      .is("platform_error", null);
+      .is("platform_error", null)
+      .limit(1000);
 
     const influencers = result.data || [];
 

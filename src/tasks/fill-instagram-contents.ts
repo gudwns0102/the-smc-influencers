@@ -25,7 +25,7 @@ export async function fillInstagramContents() {
     .eq("platform", "instagram")
     .is("platform_error", null)
     .is("contents", null)
-    .limit(10);
+    .limit(1000);
 
   const influencers = result.data || [];
 

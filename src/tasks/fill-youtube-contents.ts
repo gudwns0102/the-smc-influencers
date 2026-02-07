@@ -23,7 +23,8 @@ export async function fillYoutubeContents() {
       )
       .eq("platform", "youtube")
       .is("platform_error", null)
-      .is("contents", null);
+      .is("contents", null)
+      .limit(1000);
 
     const influencers = result.data || [];
 
