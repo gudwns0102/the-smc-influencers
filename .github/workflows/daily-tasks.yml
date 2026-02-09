@@ -2,8 +2,8 @@ name: Daily Influencer Tasks
 
 on:
   schedule:
-    # Run every day at midnight UTC (09:00 KST)
-    - cron: '0 0 * * *'
+    # Run every day at midnight Korea Time (15:00 UTC / 00:00 KST)
+    - cron: "0 15 * * *"
   workflow_dispatch:
     # Allows manual trigger from the GitHub Actions tab
     inputs:
