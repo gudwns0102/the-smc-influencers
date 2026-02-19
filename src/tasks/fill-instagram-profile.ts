@@ -37,9 +37,14 @@ export async function fillInstagramProfile(options?: {
 
     const run = await apify_client
       .actor("apify/instagram-profile-scraper")
-      .call({
-        usernames: influencers.map((i) => i.handle),
-      });
+      .call(
+        {
+          usernames: influencers.map((i) => i.handle),
+        },
+        {
+          log: null,
+        },
+      );
 
     logger.info(TASK_NAME, "Scraper started, fetching results...");
 
@@ -49,6 +54,7 @@ export async function fillInstagramProfile(options?: {
             username: string;
             fullName: string;
             followersCount: number;
+            private: boolean;
           }
         | {
             username: string;
@@ -69,10 +75,10 @@ export async function fillInstagramProfile(options?: {
         );
 
         if (!profileItem) {
-          logger.error(
-            TASK_NAME,
-            `Profile item not found for ${influencer.handle}`,
-          );
+          // logger.error(
+          //   TASK_NAME,
+          //   `Profile item not found for ${influencer.handle}`,
+          // );
           return {
             id: influencer.id,
             handle: influencer.handle,
@@ -82,15 +88,27 @@ export async function fillInstagramProfile(options?: {
         }
 
         if ("error" in profileItem) {
-          logger.error(
-            TASK_NAME,
-            `Apify error for ${influencer.handle}: ${profileItem.error}`,
-          );
+          // logger.error(
+          //   TASK_NAME,
+          //   `Apify error for ${influencer.handle}: ${profileItem.error}`,
+          // );
           return {
             id: influencer.id,
             handle: influencer.handle,
             platform: influencer.platform,
             platform_error: profileItem.error,
+          };
+        }
+
+        if (profileItem.private) {
+          // logger.error(TASK_NAME, `Private account: ${influencer.handle}`);
+          return {
+            id: influencer.id,
+            handle: influencer.handle,
+            platform: influencer.platform,
+            display_name: profileItem.fullName,
+            follower_count: profileItem.followersCount,
+            platform_error: "is_private_account_error",
           };
         }
 

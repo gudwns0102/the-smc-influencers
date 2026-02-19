@@ -19,4 +19,5 @@ export type ReelData = {
   videoDuration: number | null;
   videoViewCount: number | null;
   videoPlayCount: number | null;
+  inputUrl: string;
 };

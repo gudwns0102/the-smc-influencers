@@ -15,8 +15,10 @@
   "dependencies": {
     "@googleapis/youtube": "^31.0.0",
     "@supabase/supabase-js": "^2.93.3",
+    "@types/lodash": "^4.17.23",
     "apify-client": "^2.22.0",
     "dotenv": "^17.2.3",
+    "lodash": "^4.17.23",
     "typescript": "^5.9.3"
   },
   "devDependencies": {

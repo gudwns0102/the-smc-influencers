@@ -3,6 +3,7 @@ import { apify_client } from "../lib/apify";
 import { filterNull } from "../utils/helpers";
 import type { ReelData } from "../types";
 import { logger } from "../utils/logger";
+import _ from "lodash";
 
 const TASK_NAME = "Instagram Contents";
 
@@ -25,7 +26,7 @@ export async function fillInstagramContents() {
     .eq("platform", "instagram")
     .is("platform_error", null)
     .is("contents", null)
-    .limit(500);
+    .limit(100); // Github actions throwed when limit is too big
 
   const influencers = result.data || [];
 
@@ -39,10 +40,15 @@ export async function fillInstagramContents() {
     `Found ${influencers.length} influencers: ${influencers.map((i) => i.handle).join(", ")}`,
   );
 
-  const run = await apify_client.actor("apify/instagram-reel-scraper").call({
-    username: influencers.map((i) => i.handle),
-    resultsLimit: 15,
-  });
+  const run = await apify_client.actor("apify/instagram-reel-scraper").call(
+    {
+      username: influencers.map((i) => i.handle),
+      resultsLimit: 15,
+    },
+    {
+      log: null,
+    },
+  );
 
   logger.info(TASK_NAME, "Scraper started, fetching reel items...");
 
@@ -61,13 +67,30 @@ export async function fillInstagramContents() {
         return null;
       }
 
-      const owner = influencers.find((i) => i.handle === content.ownerUsername);
+      const content_handle = content.inputUrl.split("/").pop();
+
+      if (!content_handle) {
+        return null;
+      }
+
+      const owner = influencers.find((i) => i.handle === content_handle);
 
       if (!owner) {
         return null;
       }
 
       if (!content.videoPlayCount) {
+        return null;
+      }
+
+      if (!content.timestamp) {
+        return null;
+      }
+
+      try {
+        new Date(content.timestamp);
+      } catch (error) {
+        logger.error(TASK_NAME, "Invalid timestamp", error);
         return null;
       }
 
@@ -81,6 +104,33 @@ export async function fillInstagramContents() {
       };
     })
     .filter(filterNull);
+
+  const valid_influencers_id = _.uniq(
+    upsert_payload.map((ci) => ci.influencer_id),
+  );
+
+  const no_content_influencers_id = influencers
+    .filter((i) => !valid_influencers_id.includes(i.id))
+    .map((i) => i.id);
+
+  logger.info(
+    TASK_NAME,
+    `no_content_influencers_id: ${no_content_influencers_id.length}`,
+  );
+
+  const influencer_update_result = await supabase
+    .from("influencers")
+    .update({ platform_error: "no_contents" })
+    .in("id", no_content_influencers_id);
+
+  if (influencer_update_result.error) {
+    logger.error(
+      TASK_NAME,
+      "Failed to update influencers to Supabase",
+      influencer_update_result.error,
+    );
+    return;
+  }
 
   const upsert_result = await supabase.from("contents").upsert(upsert_payload);
 
