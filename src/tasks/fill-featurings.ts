@@ -102,9 +102,10 @@ export async function fillFeaturings() {
         `Processing ${influencer.platform}:${influencer.handle}`,
       );
 
-      const keywords = [influencer.display_name, influencer.handle].filter(
-        filterNull,
-      );
+      // Filter out null or empty string
+      const keywords = [influencer.display_name, influencer.handle]
+        .filter(filterNull)
+        .filter((i) => !!i);
 
       let search_result_item: SearchResultItem | undefined;
 
@@ -161,7 +162,31 @@ export async function fillFeaturings() {
           },
         );
 
-        const audienceData = (await audienceResponse.json()) as any;
+        const audienceData = (await audienceResponse.json()) as {
+          result: {
+            audience: {
+              main_audience: {
+                main_group_gender: string;
+                main_group_name: string;
+                main_group_rate: number;
+              };
+              female_age_group: Array<{
+                group_name: string;
+                group_value: number;
+              }>;
+              male_age_group: Array<{
+                group_name: string;
+                group_value: number;
+              }>;
+              language_summary: {
+                language_list: Array<{
+                  name: string;
+                  value: number;
+                }>;
+              } | null;
+            };
+          };
+        };
 
         if (!audienceData.result || !audienceData.result.audience) {
           throw new Error("Failed to fetch audience data from Featuring");
@@ -192,7 +217,7 @@ export async function fillFeaturings() {
           .filter((item: any) => item.group_name === "35-44")
           .reduce((acc: number, item: any) => acc + item.group_value, 0);
         const language_kr_pct =
-          language_summary.language_list.find(
+          language_summary?.language_list?.find(
             (item: any) => item.name === "Korean",
           )?.value ?? null;
 
