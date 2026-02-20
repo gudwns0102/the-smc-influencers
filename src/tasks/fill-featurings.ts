@@ -1,8 +1,17 @@
 import { supabase } from "../lib/supabase";
 import { logger } from "../utils/logger";
-import { randomDelay } from "../utils/helpers";
+import { filterNull, randomDelay } from "../utils/helpers";
 
 const TASK_NAME = "Featuring Audience";
+
+type SearchResultItem = {
+  platform_code: string;
+  username: string;
+  full_name: string;
+  platform_pk: string;
+  category_1: string;
+  category_2: string;
+};
 
 export async function fillFeaturings() {
   logger.divider();
@@ -93,44 +102,50 @@ export async function fillFeaturings() {
         `Processing ${influencer.platform}:${influencer.handle}`,
       );
 
-      const handle = influencer.handle;
+      const keywords = [influencer.display_name, influencer.handle].filter(
+        filterNull,
+      );
+
+      let search_result_item: SearchResultItem | undefined;
+
+      const featuring_platform_code =
+        influencer.platform === "youtube" ? "yt" : "ig";
+
       try {
-        const featuring_platform_code =
-          influencer.platform === "youtube" ? "yt" : "ig";
-
-        const searchUrl = new URL(
-          "https://prod-api.featuring.co/discover/explore/all/account-search/",
-        );
-        searchUrl.searchParams.append("page", "1");
-        searchUrl.searchParams.append("keyword", handle);
-        const searchResponse = await fetch(searchUrl, {
-          method: "GET",
-          headers: authHeaders,
-        });
-        const searchResultData = (await searchResponse.json()) as {
-          result: {
-            results: {
-              platform_code: string;
-              username: string;
-              full_name: string;
-              platform_pk: string;
-              category_1: string;
-              category_2: string;
-            }[];
+        for (const keyword of keywords) {
+          const searchUrl = new URL(
+            "https://prod-api.featuring.co/discover/explore/all/account-search/",
+          );
+          searchUrl.searchParams.append("page", "1");
+          searchUrl.searchParams.append("keyword", keyword);
+          const searchResponse = await fetch(searchUrl, {
+            method: "GET",
+            headers: authHeaders,
+          });
+          const searchResultData = (await searchResponse.json()) as {
+            result: {
+              results: SearchResultItem[];
+            };
           };
-        };
-        const {
-          result: { results },
-        } = searchResultData;
+          const {
+            result: { results },
+          } = searchResultData;
 
-        const search_result_item = results.find(
-          (item) =>
-            item.platform_code === featuring_platform_code &&
-            (item.username === handle || item.full_name === handle),
-        );
+          search_result_item = results.find(
+            (item) =>
+              item.platform_code === featuring_platform_code &&
+              (item.username === keyword || item.full_name === keyword),
+          );
+
+          if (search_result_item) {
+            break;
+          }
+        }
 
         if (!search_result_item) {
-          throw new Error(`Handle not found in Featuring: ${handle}`);
+          throw new Error(
+            `Handle not found in Featuring: ${influencer.handle}`,
+          );
         }
 
         logger.info(
@@ -206,11 +221,14 @@ export async function fillFeaturings() {
           throw result.error;
         }
 
-        logger.success(TASK_NAME, `Updated audience for ${handle}`);
+        logger.success(TASK_NAME, `Updated audience for ${influencer.handle}`);
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : String(error);
-        logger.error(TASK_NAME, `Failed to process ${handle}: ${errorMessage}`);
+        logger.error(
+          TASK_NAME,
+          `Failed to process ${influencer.handle}: ${errorMessage}`,
+        );
 
         // Record the error in the database
         await supabase
