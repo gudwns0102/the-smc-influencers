@@ -26,7 +26,8 @@ export async function fillInstagramContents() {
     .eq("platform", "instagram")
     .is("platform_error", null)
     .is("contents", null)
-    .limit(100); // Github actions throwed when limit is too big
+    .limit(500);
+  // Github actions throwed when limit is too big
 
   const influencers = result.data || [];
 

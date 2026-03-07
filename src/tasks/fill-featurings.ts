@@ -263,7 +263,7 @@ export async function fillFeaturings() {
       }
 
       // Add a random delay between 1 and 3 seconds to avoid detection
-      await randomDelay(5000, 8000);
+      await randomDelay(3000, 5000);
     }
   } finally {
     logger.info(TASK_NAME, "Logging out from Featuring...");
