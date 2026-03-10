@@ -1,3 +1,4 @@
+import type { Database } from "../lib/database.types";
 import { supabase } from "../lib/supabase";
 import { youtube_client } from "../lib/youtube";
 import { logger } from "../utils/logger";
@@ -45,6 +46,9 @@ export async function fillYoutubeContents() {
       is_ad: boolean;
     }[] = [];
 
+    const errors: Array<Database["public"]["Tables"]["influencers"]["Insert"]> =
+      [];
+
     for (const influencer of influencers) {
       try {
         logger.info(TASK_NAME, `Fetching content for ${influencer.handle}...`);
@@ -64,6 +68,14 @@ export async function fillYoutubeContents() {
             TASK_NAME,
             `Uploads playlist not found for ${influencer.handle}`,
           );
+
+          errors.push({
+            id: influencer.id,
+            handle: influencer.handle,
+            platform: influencer.platform,
+            platform_error: "Uploads playlist not found",
+          });
+
           continue;
         }
 
@@ -81,6 +93,14 @@ export async function fillYoutubeContents() {
 
         if (videoIds.length === 0) {
           logger.info(TASK_NAME, `No videos found for ${influencer.handle}`);
+
+          errors.push({
+            id: influencer.id,
+            handle: influencer.handle,
+            platform: influencer.platform,
+            platform_error: "No videos found",
+          });
+
           continue;
         }
 
@@ -108,6 +128,13 @@ export async function fillYoutubeContents() {
           `Error fetching contents for ${influencer.handle}`,
           err,
         );
+
+        errors.push({
+          id: influencer.id,
+          handle: influencer.handle,
+          platform: influencer.platform,
+          platform_error: err instanceof Error ? err.message : String(err),
+        });
       }
     }
 
@@ -121,6 +148,10 @@ export async function fillYoutubeContents() {
         TASK_NAME,
         `Successfully upserted ${allContents.length} content items.`,
       );
+    }
+
+    if (errors.length > 0) {
+      await supabase.from("influencers").upsert(errors);
     }
 
     logger.success(TASK_NAME, "Content update completed successfully.");
