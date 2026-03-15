@@ -5,32 +5,19 @@ import { logger } from "../utils/logger";
 
 const TASK_NAME = "YouTube Contents";
 
-export async function fillYoutubeContents() {
+export async function fillYoutubeContents(
+  influencers: Pick<
+    Database["public"]["Tables"]["influencers"]["Row"] & {
+      platform: "youtube";
+    },
+    "id" | "handle" | "platform"
+  >[],
+) {
   logger.divider();
   logger.info(TASK_NAME, "Starting task...");
   try {
-    const result = await supabase
-      .from("influencers")
-      .select(
-        `
-        id,
-        handle,
-        platform,
-        contents(
-          id,
-          created_at
-        )
-        `,
-      )
-      .eq("platform", "youtube")
-      .is("platform_error", null)
-      .is("contents", null)
-      .limit(1000);
-
-    const influencers = result.data || [];
-
     if (influencers.length === 0) {
-      logger.info(TASK_NAME, "No influencers found needing content update.");
+      logger.info(TASK_NAME, "No influencers provided needing content update.");
       return;
     }
 
@@ -39,14 +26,14 @@ export async function fillYoutubeContents() {
       `Found ${influencers.length} influencers: ${influencers.map((i) => i.handle).join(", ")}`,
     );
 
-    const allContents: {
+    const contentsToUpsert: {
       influencer_id: string;
       published_at: string;
       view_count: number;
       is_ad: boolean;
     }[] = [];
 
-    const errors: Array<Database["public"]["Tables"]["influencers"]["Insert"]> =
+    const influencerErrors: Array<Database["public"]["Tables"]["influencers"]["Insert"]> =
       [];
 
     for (const influencer of influencers) {
@@ -69,7 +56,7 @@ export async function fillYoutubeContents() {
             `Uploads playlist not found for ${influencer.handle}`,
           );
 
-          errors.push({
+          influencerErrors.push({
             id: influencer.id,
             handle: influencer.handle,
             platform: influencer.platform,
@@ -94,7 +81,7 @@ export async function fillYoutubeContents() {
         if (videoIds.length === 0) {
           logger.info(TASK_NAME, `No videos found for ${influencer.handle}`);
 
-          errors.push({
+          influencerErrors.push({
             id: influencer.id,
             handle: influencer.handle,
             platform: influencer.platform,
@@ -121,7 +108,7 @@ export async function fillYoutubeContents() {
               i.paidProductPlacementDetails?.hasPaidProductPlacement ?? false,
           })) || [];
 
-        allContents.push(...contents);
+        contentsToUpsert.push(...contents);
       } catch (err) {
         logger.error(
           TASK_NAME,
@@ -129,7 +116,7 @@ export async function fillYoutubeContents() {
           err,
         );
 
-        errors.push({
+        influencerErrors.push({
           id: influencer.id,
           handle: influencer.handle,
           platform: influencer.platform,
@@ -138,20 +125,38 @@ export async function fillYoutubeContents() {
       }
     }
 
-    if (allContents.length > 0) {
-      const { error } = await supabase.from("contents").upsert(allContents);
+    if (contentsToUpsert.length > 0) {
+      const validInfluencerIds = Array.from(
+        new Set(contentsToUpsert.map((c) => c.influencer_id)),
+      );
+
+      const { error: deleteError } = await supabase
+        .from("contents")
+        .delete()
+        .in("influencer_id", validInfluencerIds);
+
+      if (deleteError) {
+        logger.error(
+          TASK_NAME,
+          "Failed to delete old contents from Supabase",
+          deleteError,
+        );
+        return;
+      }
+
+      const { error } = await supabase.from("contents").upsert(contentsToUpsert);
       if (error) {
         logger.error(TASK_NAME, "Failed to upsert contents to Supabase", error);
         return;
       }
       logger.success(
         TASK_NAME,
-        `Successfully upserted ${allContents.length} content items.`,
+        `Successfully upserted ${contentsToUpsert.length} content items.`,
       );
     }
 
-    if (errors.length > 0) {
-      await supabase.from("influencers").upsert(errors);
+    if (influencerErrors.length > 0) {
+      await supabase.from("influencers").upsert(influencerErrors);
     }
 
     logger.success(TASK_NAME, "Content update completed successfully.");

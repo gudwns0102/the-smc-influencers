@@ -1,25 +1,23 @@
+import type { Database } from "../lib/database.types";
 import { supabase } from "../lib/supabase";
 import { youtube_client } from "../lib/youtube";
 import { logger } from "../utils/logger";
 
 const TASK_NAME = "YouTube Profile";
 
-export async function fillYoutubeProfile(options?: { is_planning?: boolean }) {
+export async function fillYoutubeProfile(
+  influencers: Pick<
+    Database["public"]["Tables"]["influencers"]["Row"] & {
+      platform: "youtube";
+    },
+    "id" | "handle" | "platform"
+  >[],
+) {
   logger.divider();
   logger.info(TASK_NAME, "Starting task...");
   try {
-    const result = await supabase
-      .from("influencers")
-      .select("*")
-      .eq("platform", "youtube")
-      .is("follower_count", null)
-      .is("platform_error", null)
-      .limit(1000);
-
-    const influencers = result.data || [];
-
     if (influencers.length === 0) {
-      logger.info(TASK_NAME, "No influencers found needing profile update.");
+      logger.info(TASK_NAME, "No influencers provided needing profile update.");
       return;
     }
 
@@ -28,12 +26,7 @@ export async function fillYoutubeProfile(options?: { is_planning?: boolean }) {
       `Found ${influencers.length} influencers: ${influencers.map((i) => i.handle).join(", ")}`,
     );
 
-    if (options?.is_planning) {
-      logger.info(TASK_NAME, "Planning done");
-      return;
-    }
-
-    const updates = [];
+    const updates: Database["public"]["Tables"]["influencers"]["Insert"][] = [];
 
     for (const influencer of influencers) {
       try {
@@ -64,6 +57,7 @@ export async function fillYoutubeProfile(options?: { is_planning?: boolean }) {
           platform: influencer.platform,
           display_name: item.snippet?.title || "",
           follower_count: Number(item.statistics?.subscriberCount ?? 0),
+          platform_error: null,
         });
       } catch (err: any) {
         logger.error(

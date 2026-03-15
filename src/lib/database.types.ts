@@ -77,7 +77,6 @@ export type Database = {
           language_kr_pct: number | null
           platform: Database["public"]["Enums"]["platform"]
           platform_error: string | null
-          proposal_data: Json | null
           updated_at: string | null
         }
         Insert: {
@@ -100,7 +99,6 @@ export type Database = {
           language_kr_pct?: number | null
           platform: Database["public"]["Enums"]["platform"]
           platform_error?: string | null
-          proposal_data?: Json | null
           updated_at?: string | null
         }
         Update: {
@@ -123,115 +121,199 @@ export type Database = {
           language_kr_pct?: number | null
           platform?: Database["public"]["Enums"]["platform"]
           platform_error?: string | null
-          proposal_data?: Json | null
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      proposals: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          influencer_id: string
+          request_code: string
+          strength_tags: string[]
+          why_this_influencer: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          influencer_id?: string
+          request_code: string
+          strength_tags: string[]
+          why_this_influencer: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          influencer_id?: string
+          request_code?: string
+          strength_tags?: string[]
+          why_this_influencer?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposals_influencer_id_fkey1"
+            columns: ["influencer_id"]
+            isOneToOne: false
+            referencedRelation: "influencer_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposals_influencer_id_fkey1"
+            columns: ["influencer_id"]
+            isOneToOne: false
+            referencedRelation: "influencers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposals_request_code_fkey1"
+            columns: ["request_code"]
+            isOneToOne: false
+            referencedRelation: "request_codes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      request_codes: {
+        Row: {
+          created_at: string
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          app_role: Database["public"]["Enums"]["app_role"]
+          created_at: string
+          email: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          app_role: Database["public"]["Enums"]["app_role"]
+          created_at?: string
+          email?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          app_role?: Database["public"]["Enums"]["app_role"]
+          created_at?: string
+          email?: string | null
+          id?: string
+          user_id?: string
         }
         Relationships: []
       }
     }
     Views: {
+      daily_count_view: {
+        Row: {
+          date: string | null
+          error_count: number | null
+          instagram_count: number | null
+          total_count: number | null
+          verified_미정산_count: number | null
+          verified_정산_count: number | null
+          youtube_count: number | null
+        }
+        Relationships: []
+      }
       influencer_view: {
         Row: {
-          account_id: string | null
           age_1317_pct: number | null
           age_1824_pct: number | null
           age_2534_pct: number | null
           age_3544_pct: number | null
+          can_settle: boolean | null
           category_tag_main: string | null
           category_tag_sub: string | null
           clean_url: string | null
-          content_download_at: string | null
           created_at: string | null
           created_by: string | null
+          created_by_email: string | null
           display_name: string | null
-          follower_count: number | null
+          follower_count: string | null
+          frr: number | null
           frr_ad: number | null
-          frr_mid: number | null
-          frr_short: number | null
           gender_female_pct: number | null
           gender_male_pct: number | null
           handle: string | null
           id: string | null
+          is_admin: boolean | null
           language_kr_pct: number | null
           platform: Database["public"]["Enums"]["platform"] | null
-          platform_error: string | null
-          views_ad_avg: number | null
+          recent_lift_ratio: number | null
+          request_codes: string[] | null
+          strength_tags: string[] | null
+          tier: Database["public"]["Enums"]["tier"] | null
+          views_ad_avg: string | null
           views_ad_avg_sample_size: number | null
-          views_mid_15_avg: number | null
+          views_mid_15_avg: string | null
           views_mid_15_avg_sample_size: number | null
-          views_short_6_avg: number | null
+          views_short_6_avg: string | null
           views_short_6_avg_sample_size: number | null
+          why_this_influencers: string[] | null
         }
-        Insert: {
-          account_id?: never
-          age_1317_pct?: number | null
-          age_1824_pct?: number | null
-          age_2534_pct?: number | null
-          age_3544_pct?: number | null
-          category_tag_main?: string | null
-          category_tag_sub?: string | null
-          clean_url?: never
-          content_download_at?: never
-          created_at?: string | null
-          created_by?: string | null
-          display_name?: string | null
-          follower_count?: number | null
-          frr_ad?: never
-          frr_mid?: never
-          frr_short?: never
-          gender_female_pct?: number | null
-          gender_male_pct?: number | null
-          handle?: string | null
-          id?: string | null
-          language_kr_pct?: number | null
-          platform?: Database["public"]["Enums"]["platform"] | null
-          platform_error?: string | null
-          views_ad_avg?: never
-          views_ad_avg_sample_size?: never
-          views_mid_15_avg?: never
-          views_mid_15_avg_sample_size?: never
-          views_short_6_avg?: never
-          views_short_6_avg_sample_size?: never
-        }
-        Update: {
-          account_id?: never
-          age_1317_pct?: number | null
-          age_1824_pct?: number | null
-          age_2534_pct?: number | null
-          age_3544_pct?: number | null
-          category_tag_main?: string | null
-          category_tag_sub?: string | null
-          clean_url?: never
-          content_download_at?: never
-          created_at?: string | null
-          created_by?: string | null
-          display_name?: string | null
-          follower_count?: number | null
-          frr_ad?: never
-          frr_mid?: never
-          frr_short?: never
-          gender_female_pct?: number | null
-          gender_male_pct?: number | null
-          handle?: string | null
-          id?: string | null
-          language_kr_pct?: number | null
-          platform?: Database["public"]["Enums"]["platform"] | null
-          platform_error?: string | null
-          views_ad_avg?: never
-          views_ad_avg_sample_size?: never
-          views_mid_15_avg?: never
-          views_mid_15_avg_sample_size?: never
-          views_short_6_avg?: never
-          views_short_6_avg_sample_size?: never
+        Relationships: []
+      }
+      statistics: {
+        Row: {
+          category_counts: Json | null
+          celeb_count: number | null
+          error_count: number | null
+          ig_count: number | null
+          in_progress_count: number | null
+          macro_count: number | null
+          mega_count: number | null
+          micro_count: number | null
+          nano_count: number | null
+          new_count: number | null
+          total_count: number | null
+          verified_count: number | null
+          yt_count: number | null
         }
         Relationships: []
       }
     }
     Functions: {
-      [_ in never]: never
+      can_settle: {
+        Args: { i: Database["public"]["Tables"]["influencers"]["Row"] }
+        Returns: boolean
+      }
+      custom_access_token_hook: { Args: { event: Json }; Returns: Json }
+      get_influencer_frr: {
+        Args: {
+          p_influencer: Database["public"]["Tables"]["influencers"]["Row"]
+        }
+        Returns: number
+      }
+      get_influencer_status: {
+        Args: { i: Database["public"]["Tables"]["influencers"]["Row"] }
+        Returns: Database["public"]["Enums"]["influencer_status"]
+      }
+      get_tier: {
+        Args: { i: Database["public"]["Tables"]["influencers"]["Row"] }
+        Returns: Database["public"]["Enums"]["tier"]
+      }
+      is_admin: { Args: never; Returns: boolean }
     }
     Enums: {
+      app_role: "admin" | "arbeit"
+      influencer_status: "new" | "in_progress" | "error" | "verified"
       platform: "youtube" | "instagram"
+      tier: "Celeb" | "Mega" | "Macro" | "Micro" | "Mano" | "N/A"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -359,7 +441,10 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      app_role: ["admin", "arbeit"],
+      influencer_status: ["new", "in_progress", "error", "verified"],
       platform: ["youtube", "instagram"],
+      tier: ["Celeb", "Mega", "Macro", "Micro", "Mano", "N/A"],
     },
   },
 } as const

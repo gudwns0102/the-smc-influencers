@@ -1,27 +1,23 @@
 import { supabase } from "../lib/supabase";
 import { apify_client } from "../lib/apify";
 import { logger } from "../utils/logger";
+import type { Database } from "../lib/database.types";
 
 const TASK_NAME = "Instagram Profile";
 
-export async function fillInstagramProfile(options?: {
-  is_planning?: boolean;
-}) {
+export async function fillInstagramProfile(
+  influencers: Pick<
+    Database["public"]["Tables"]["influencers"]["Row"] & {
+      platform: "instagram";
+    },
+    "id" | "handle" | "platform"
+  >[],
+) {
   logger.divider();
   logger.info(TASK_NAME, "Starting task...");
   try {
-    const result = await supabase
-      .from("influencers")
-      .select("*")
-      .eq("platform", "instagram")
-      .is("follower_count", null)
-      .is("platform_error", null)
-      .limit(1000);
-
-    const influencers = result.data || [];
-
     if (influencers.length === 0) {
-      logger.info(TASK_NAME, "No influencers found needing profile update.");
+      logger.info(TASK_NAME, "No influencers provided needing profile update.");
       return;
     }
 
@@ -29,11 +25,6 @@ export async function fillInstagramProfile(options?: {
       TASK_NAME,
       `Found ${influencers.length} influencers: ${influencers.map((i) => i.handle).join(", ")}`,
     );
-
-    if (options?.is_planning) {
-      logger.info(TASK_NAME, "Planning done");
-      return;
-    }
 
     const run = await apify_client
       .actor("apify/instagram-profile-scraper")
@@ -118,6 +109,7 @@ export async function fillInstagramProfile(options?: {
           platform: influencer.platform,
           display_name: profileItem.fullName,
           follower_count: profileItem.followersCount,
+          platform_error: null,
         };
       }),
     );

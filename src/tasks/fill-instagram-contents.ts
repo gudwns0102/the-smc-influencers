@@ -3,36 +3,23 @@ import { apify_client } from "../lib/apify";
 import { filterNull } from "../utils/helpers";
 import type { ReelData } from "../types";
 import { logger } from "../utils/logger";
-import _ from "lodash";
+import type { Database } from "../lib/database.types";
 
 const TASK_NAME = "Instagram Contents";
 
-export async function fillInstagramContents() {
+export async function fillInstagramContents(
+  influencers: Pick<
+    Database["public"]["Tables"]["influencers"]["Row"] & {
+      platform: "instagram";
+    },
+    "id" | "handle" | "platform"
+  >[],
+) {
   logger.divider();
   logger.info(TASK_NAME, "Starting task...");
-  const result = await supabase
-    .from("influencers")
-    .select(
-      `
-      id,
-      handle,
-      platform,
-      contents(
-        id,
-        created_at
-      )
-      `,
-    )
-    .eq("platform", "instagram")
-    .is("platform_error", null)
-    .is("contents", null)
-    .limit(500);
-  // Github actions throwed when limit is too big
-
-  const influencers = result.data || [];
 
   if (influencers.length === 0) {
-    logger.info(TASK_NAME, "No influencers found needing content update.");
+    logger.info(TASK_NAME, "No influencers provided needing content update.");
     return;
   }
 
@@ -62,7 +49,7 @@ export async function fillInstagramContents() {
     `Fetched ${contentItems.length} reel items from Apify.`,
   );
 
-  const upsert_payload = contentItems
+  const contentsToUpsert = contentItems
     .map((content) => {
       if ("error" in content) {
         return null;
@@ -106,46 +93,67 @@ export async function fillInstagramContents() {
     })
     .filter(filterNull);
 
-  const valid_influencers_id = _.uniq(
-    upsert_payload.map((ci) => ci.influencer_id),
+  const validInfluencerIds = Array.from(
+    new Set(contentsToUpsert.map((ci) => ci.influencer_id)),
   );
 
-  const no_content_influencers_id = influencers
-    .filter((i) => !valid_influencers_id.includes(i.id))
+  const influencersWithNoContentsIds = influencers
+    .filter((i) => !validInfluencerIds.includes(i.id))
     .map((i) => i.id);
 
   logger.info(
     TASK_NAME,
-    `no_content_influencers_id: ${no_content_influencers_id.length}`,
+    `influencersWithNoContentsIds: ${influencersWithNoContentsIds.length}`,
   );
 
-  const influencer_update_result = await supabase
+  const influencerUpdateResult = await supabase
     .from("influencers")
     .update({ platform_error: "no_contents" })
-    .in("id", no_content_influencers_id);
+    .in("id", influencersWithNoContentsIds);
 
-  if (influencer_update_result.error) {
+  if (influencerUpdateResult.error) {
     logger.error(
       TASK_NAME,
       "Failed to update influencers to Supabase",
-      influencer_update_result.error,
+      influencerUpdateResult.error,
     );
     return;
   }
 
-  const upsert_result = await supabase.from("contents").upsert(upsert_payload);
+  if (validInfluencerIds.length > 0) {
+    const { error: deleteError } = await supabase
+      .from("contents")
+      .delete()
+      .in("influencer_id", validInfluencerIds);
 
-  if (upsert_result.error) {
+    if (deleteError) {
+      logger.error(
+        TASK_NAME,
+        "Failed to delete old contents from Supabase",
+        deleteError,
+      );
+      return;
+    }
+  }
+
+  if (contentsToUpsert.length === 0) {
+    logger.info(TASK_NAME, "No structured contents extracted to upsert.");
+    return;
+  }
+
+  const upsertResult = await supabase.from("contents").upsert(contentsToUpsert);
+
+  if (upsertResult.error) {
     logger.error(
       TASK_NAME,
       "Failed to upsert contents to Supabase",
-      upsert_result.error,
+      upsertResult.error,
     );
     return;
   }
 
   logger.success(
     TASK_NAME,
-    `Successfully upserted ${upsert_payload.length} content items.`,
+    `Successfully upserted ${contentsToUpsert.length} content items.`,
   );
 }

@@ -1,6 +1,7 @@
 import { supabase } from "../lib/supabase";
 import { logger } from "../utils/logger";
 import { filterNull, randomDelay } from "../utils/helpers";
+import type { Database } from "../lib/database.types";
 
 const TASK_NAME = "Featuring Audience";
 
@@ -13,21 +14,17 @@ type SearchResultItem = {
   category_2: string;
 };
 
-export async function fillFeaturings() {
+export async function fillFeaturings(
+  influencers: Pick<
+    Database["public"]["Tables"]["influencers"]["Row"],
+    "id" | "handle" | "platform" | "display_name"
+  >[],
+) {
   logger.divider();
   logger.info(TASK_NAME, "Starting task...");
-  const result = await supabase
-    .from("influencers")
-    .select("*")
-    .is("platform_error", null)
-    .is("featuring_error", null)
-    .is("age_1317_pct", null)
-    .limit(1000);
-
-  const influencers = result.data || [];
 
   if (influencers.length === 0) {
-    logger.info(TASK_NAME, "No influencers found needing audience update.");
+    logger.info(TASK_NAME, "No influencers provided needing audience update.");
     return;
   }
 
@@ -196,29 +193,29 @@ export async function fillFeaturings() {
           audienceData.result.audience;
 
         const gender_male_pct = male_age_group.reduce(
-          (acc: number, item: any) => acc + item.group_value,
+          (acc, item) => acc + item.group_value,
           0,
         );
         const gender_female_pct = female_age_group.reduce(
-          (acc: number, item: any) => acc + item.group_value,
+          (acc, item) => acc + item.group_value,
           0,
         );
         const all_groups = [...male_age_group, ...female_age_group];
         const age_1317_pct = all_groups
-          .filter((item: any) => item.group_name === "13-17")
-          .reduce((acc: number, item: any) => acc + item.group_value, 0);
+          .filter((item) => item.group_name === "13-17")
+          .reduce((acc, item) => acc + item.group_value, 0);
         const age_1824_pct = all_groups
-          .filter((item: any) => item.group_name === "18-24")
-          .reduce((acc: number, item: any) => acc + item.group_value, 0);
+          .filter((item) => item.group_name === "18-24")
+          .reduce((acc, item) => acc + item.group_value, 0);
         const age_2534_pct = all_groups
-          .filter((item: any) => item.group_name === "25-34")
-          .reduce((acc: number, item: any) => acc + item.group_value, 0);
+          .filter((item) => item.group_name === "25-34")
+          .reduce((acc, item) => acc + item.group_value, 0);
         const age_3544_pct = all_groups
-          .filter((item: any) => item.group_name === "35-44")
-          .reduce((acc: number, item: any) => acc + item.group_value, 0);
+          .filter((item) => item.group_name === "35-44")
+          .reduce((acc, item) => acc + item.group_value, 0);
         const language_kr_pct =
           language_summary?.language_list?.find(
-            (item: any) => item.name === "Korean",
+            (item) => item.name === "Korean",
           )?.value ?? null;
 
         const round = (val: number | null) =>

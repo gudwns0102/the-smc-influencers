@@ -1,28 +1,27 @@
 import "dotenv/config";
-import { fillInstagramContents } from "./src/tasks/fill-instagram-contents";
-import { fillYoutubeContents } from "./src/tasks/fill-youtube-contents";
-import { fillInstagramProfile } from "./src/tasks/fill-instagram-profile";
-import { fillYoutubeProfile } from "./src/tasks/fill-youtube-profile";
-import { fillFeaturings } from "./src/tasks/fill-featurings";
+import { supabase } from "./src/lib/supabase";
+import { fillAll } from "./src/tasks/fill-all";
 
 const task = process.env["TASK_TO_RUN"] || "all";
 
 console.log(`🚀 Running task: ${task}`);
 
 try {
-  if (task === "profile" || task === "all") {
-    await fillInstagramProfile({ is_planning: false });
-    await fillYoutubeProfile({ is_planning: false });
+  const { data } = await supabase
+    .from("influencers")
+    .update({ updated_at: new Date().toISOString() })
+    .in("get_influencer_status", ["new", "in_progress"])
+    .limit(500)
+    .select();
+
+  const new_influencers = data || [];
+
+  if (new_influencers.length === 0) {
+    console.log("✨ No new influencers found.");
+    process.exit(0);
   }
 
-  if (task === "featurings" || task === "all") {
-    await fillFeaturings();
-  }
-
-  if (task === "contents" || task === "all") {
-    await fillInstagramContents();
-    await fillYoutubeContents();
-  }
+  await fillAll(task, new_influencers);
 
   console.log("✨ All selected tasks completed.");
 } catch (error) {
